@@ -1,0 +1,10 @@
+version: "3.9"
+services:
+  service:
+    build:
+      context: service
+      target: dev
+    ports:
+      - "9000:80"
+    volumes:
+      - ./service:/app
