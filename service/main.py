@@ -4,13 +4,15 @@ import re
 from html.parser import HTMLParser
 
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 from pydantic.error_wrappers import ErrorWrapper
 
 
 class Publication(BaseModel):
+    url: str
     title: str | None
     year: int | None
     journal: str | None
@@ -18,6 +20,62 @@ class Publication(BaseModel):
     issue: str | None
     pages: str | None
     authors: str | None
+
+    def as_text(self):
+        parts = [
+            (self.authors if self.authors is not None else "N.N.")
+            + " ("
+            + (str(self.year) if self.year is not None else "n.d.")
+            + ")"
+        ]
+        if self.title is not None:
+            parts.append(self.title)
+        if self.journal is not None:
+            text = self.journal
+            if self.volume is not None:
+                text += ", " + self.volume
+                if self.issue is not None:
+                    text += "(" + self.issue + ")"
+            if self.pages is not None:
+                text += ", " + self.pages
+            parts.append(text)
+        parts.append(self.url)
+        return ". ".join(parts)
+
+    def as_html(self):
+        parts = [
+            (html.escape(self.authors) if self.authors is not None else "N.N.")
+            + " ("
+            + (str(self.year) if self.year is not None else "n.d.")
+            + ")"
+        ]
+        if self.title is not None:
+            parts.append(html.escape(self.title))
+        if self.journal is not None:
+            text = "<i>" + html.escape(self.journal) + "</i>"
+            if self.volume is not None:
+                text += ", <i>" + html.escape(self.volume) + "</i>"
+                if self.issue is not None:
+                    text += "(" + html.escape(self.issue) + ")"
+            if self.pages is not None:
+                text += ", " + html.escape(self.pages)
+            parts.append(text)
+        parts.append(
+            '<a href="' + html.escape(self.url) + '">' + html.escape(self.url) + "</a>"
+        )
+        return ". ".join(parts)
+
+    def as_json(self):
+        return {
+            "url": self.url,
+            "title": self.title,
+            "year": self.year,
+            "journal": self.journal,
+            "volume": self.volume,
+            "issue": self.issue,
+            "pages": self.pages,
+            "authors": self.authors,
+        }
 
 
 app = FastAPI()
@@ -94,6 +152,7 @@ async def fetch_crossref(doi: str):
         logger.warning(f"no authors in {url}")
 
     return Publication(
+        url=f"https://doi.org/{doi}",
         title=title,
         year=year,
         journal=journal,
@@ -135,24 +194,39 @@ async def fetch_url(url: str):
             parser = MyHTMLParser()
             parser.feed(response.text)
         return Publication(
+            url=url,
             title=parser.title,
             year=parser.year,
             authors=format_authors(parser.authors),
         )
     except:
         logger.exception(f"querying {url} failed")
+        raise
 
 
 DOI_RE = r"((https?://)?doi\.org/|doi:)(?P<doi>.*)"
 HDL_RE = r"((https?://)?hdl\.handle\.net/|hdl:)(?P<hdl>.*)"
 
 
-@app.get("/", response_model=Publication)
-async def root(uri: str):
+def render(publication: Publication, accept: str):
+    renderers = {
+        "text/plain": lambda: PlainTextResponse(publication.as_text()),
+        "text/html": lambda: HTMLResponse(publication.as_html()),
+        "application/json": lambda: JSONResponse(publication.as_json()),
+    }
+    for media_type in accept.split(","):
+        media_type = media_type.split(";")[0].strip()
+        if media_type in renderers:
+            return renderers[media_type]()
+    return renderers["text/plain"]()
+
+
+@app.get("/")
+async def root(uri: str, accept: str = Header(default="text/plain")):
     if m := re.match(DOI_RE, uri):
-        return await fetch_crossref(m["doi"])
+        return render(await fetch_crossref(m["doi"]), accept)
     if m := re.match(HDL_RE, uri):
-        return await fetch_url("https://hdl.handle.net/" + m["hdl"])
+        return render(await fetch_url("https://hdl.handle.net/" + m["hdl"]), accept)
     raise RequestValidationError(
         [
             ErrorWrapper(
