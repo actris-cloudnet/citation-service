@@ -1,6 +1,6 @@
 # Citation service
 
-Web service for generating citations based on <doi.org> and <hdl.handle.net> URIs.
+Web service for generating citations based on [doi.org](https://doi.org) and [hdl.handle.net](https://hdl.handle.net) URIs.
 
 ## Usage
 
