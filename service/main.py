@@ -9,6 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 from pydantic.error_wrappers import ErrorWrapper
+from utils import sanitize_html, strip_tags
 
 
 class Publication(BaseModel):
@@ -29,7 +30,7 @@ class Publication(BaseModel):
             + ")"
         ]
         if self.title is not None:
-            parts.append(self.title)
+            parts.append(strip_tags(self.title))
         if self.journal is not None:
             text = self.journal
             if self.volume is not None:
@@ -50,7 +51,7 @@ class Publication(BaseModel):
             + ")"
         ]
         if self.title is not None:
-            parts.append(html.escape(self.title))
+            parts.append(self.title)
         if self.journal is not None:
             text = "<i>" + html.escape(self.journal) + "</i>"
             if self.volume is not None:
@@ -82,11 +83,6 @@ app = FastAPI()
 logger = logging.getLogger(__name__)
 
 
-def clean_crossref(text: str) -> str:
-    """Clean up possible newlines and HTML character references."""
-    return " ".join(html.unescape(text).split())
-
-
 def format_authors(authors: list[str]) -> str:
     if len(authors) <= 2:
         return " & ".join(authors)
@@ -107,7 +103,7 @@ async def fetch_crossref(doi: str):
         raise
 
     try:
-        title = clean_crossref(data["title"][0])
+        title = sanitize_html(data["title"][0])
     except (KeyError, IndexError):
         title = None
         logger.warning(f"no title in {url}")
@@ -119,10 +115,10 @@ async def fetch_crossref(doi: str):
         logger.warning(f"no year in {url}")
 
     try:
-        journal = clean_crossref(data["short-container-title"][0])
+        journal = strip_tags(data["short-container-title"][0])
     except (KeyError, IndexError):
         try:
-            journal = clean_crossref(data["container-title"][0])
+            journal = strip_tags(data["container-title"][0])
         except (KeyError, IndexError):
             journal = None
             logger.warning(f"no journal in {url}")
@@ -195,7 +191,7 @@ async def fetch_url(url: str):
             parser.feed(response.text)
         return Publication(
             url=url,
-            title=parser.title,
+            title=sanitize_html(parser.title),
             year=parser.year,
             authors=format_authors(parser.authors),
         )
