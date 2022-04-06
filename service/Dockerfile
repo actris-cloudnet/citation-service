@@ -7,11 +7,13 @@ COPY setup.py .
 RUN pip install .
 
 FROM base AS dev
-CMD ["uvicorn", "main:app", "--reload", "--host", "0.0.0.0", "--port", "80"]
+EXPOSE 8080
+CMD ["uvicorn", "main:app", "--reload", "--host", "0.0.0.0", "--port", "8080"]
 
 FROM base AS lint
 RUN pip install isort mypy black
 
 FROM base AS prod
 COPY . /app
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
+EXPOSE 8080
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
