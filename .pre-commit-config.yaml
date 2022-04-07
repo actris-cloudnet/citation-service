@@ -24,8 +24,13 @@ repos:
     rev: v0.931
     hooks:
       - id: mypy
-        args: [--python-version=3.10]
-  - repo: https://github.com/koalaman/shellcheck-precommit
-    rev: v0.8.0
+        args: [--python-version=3.10, --ignore-missing-imports]
+  - repo: local
     hooks:
-      - id: shellcheck
+      - id: pylint
+        name: pylint
+        entry: pylint
+        language: system
+        types: [python]
+        require_serial: true
+        args: [--py-version=3.10]

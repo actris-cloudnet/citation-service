@@ -83,11 +83,10 @@ app = FastAPI()
 logger = logging.getLogger(__name__)
 
 
-def format_authors(authors: list[str]) -> str:
+def format_authors(authors: list) -> str:
     if len(authors) <= 2:
         return " & ".join(authors)
-    else:
-        return authors[0] + " et al."
+    return authors[0] + " et al."
 
 
 async def fetch_crossref(doi: str):
@@ -159,7 +158,7 @@ async def fetch_crossref(doi: str):
     )
 
 
-class MyHTMLParser(HTMLParser):
+class MyHTMLParser(HTMLParser):  # pylint: disable=W0223
     def __init__(self):
         super().__init__()
         self.title = None
@@ -173,8 +172,8 @@ class MyHTMLParser(HTMLParser):
                 self.title = attrs.get("content")
             elif attrs.get("name") == "citation_date":
                 if date := attrs.get("content"):
-                    if m := re.search(r"\d{4}", date):
-                        self.year = m[0]
+                    if match := re.search(r"\d{4}", date):
+                        self.year = match[0]
             elif attrs.get("name") == "citation_author":
                 if author := attrs.get("content"):
                     last_name = author.split(",")[0].strip()
@@ -219,10 +218,10 @@ def render(publication: Publication, accept: str):
 
 @app.get("/")
 async def root(uri: str, accept: str = Header(default="text/plain")):
-    if m := re.match(DOI_RE, uri):
-        return render(await fetch_crossref(m["doi"]), accept)
-    if m := re.match(HDL_RE, uri):
-        return render(await fetch_url("https://hdl.handle.net/" + m["hdl"]), accept)
+    if match := re.match(DOI_RE, uri):
+        return render(await fetch_crossref(match["doi"]), accept)
+    if match := re.match(HDL_RE, uri):
+        return render(await fetch_url("https://hdl.handle.net/" + match["hdl"]), accept)
     raise RequestValidationError(
         [
             ErrorWrapper(
