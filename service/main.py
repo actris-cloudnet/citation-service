@@ -89,7 +89,7 @@ def format_authors(authors: list) -> str:
     return authors[0] + " et al."
 
 
-async def fetch_crossref(doi: str):
+async def fetch_crossref(doi: str) -> Publication:
     url = f"https://api.crossref.org/works/{doi}"
     try:
         logger.info(f"querying {url}")
@@ -180,7 +180,7 @@ class MyHTMLParser(HTMLParser):  # pylint: disable=W0223
                     self.authors.append(last_name)
 
 
-async def fetch_url(url: str):
+async def fetch_url(url: str) -> Publication:
     try:
         logger.info(f"querying {url}")
         async with httpx.AsyncClient() as client:
@@ -203,7 +203,7 @@ DOI_RE = r"((https?://)?doi\.org/|doi:)(?P<doi>.*)"
 HDL_RE = r"((https?://)?hdl\.handle\.net/|hdl:)(?P<hdl>.*)"
 
 
-def render(publication: Publication, accept: str):
+def render(publication: Publication, accept: str) -> PlainTextResponse:
     renderers = {
         "text/plain": lambda: PlainTextResponse(publication.as_text()),
         "text/html": lambda: HTMLResponse(publication.as_html()),
