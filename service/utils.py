@@ -1,8 +1,8 @@
 import html
 import re
-from collections.abc import Iterable
 from html.parser import HTMLParser
 from io import StringIO
+from typing import Iterable
 
 from html_sanitizer import Sanitizer
 
@@ -72,18 +72,18 @@ sup = {
 sup_trans = str.maketrans(sup)
 
 
-def unicodize_sub_sup(html):
-    html = re.sub(
+def unicodize_sub_sup(text_html: str):
+    text_html = re.sub(
         "<sub>(" + re_char_class(sub) + ")</sub>",
         lambda m: m[1].translate(sub_trans),
-        html,
+        text_html,
     )
-    html = re.sub(
+    text_html = re.sub(
         "<sup>(" + re_char_class(sub) + ")</sup>",
         lambda m: m[1].translate(sup_trans),
-        html,
+        text_html,
     )
-    return html
+    return text_html
 
 
 def sanitize_html(text: str) -> str:
@@ -100,7 +100,7 @@ def sanitize_html(text: str) -> str:
     return sanitizer.sanitize(text)
 
 
-class TagStripper(HTMLParser):
+class TagStripper(HTMLParser):  # pylint: disable=W0223
     def __init__(self):
         super().__init__()
         self.reset()
@@ -108,16 +108,16 @@ class TagStripper(HTMLParser):
         self.convert_charrefs = True
         self.text = StringIO()
 
-    def handle_data(self, d):
-        self.text.write(d)
+    def handle_data(self, data: str):
+        self.text.write(data)
 
     def get_data(self) -> str:
         return self.text.getvalue()
 
 
-def strip_tags(html):
-    html = sanitize_html(html)
-    html = unicodize_sub_sup(html)
+def strip_tags(text_html: str):
+    text_html = sanitize_html(text_html)
+    text_html = unicodize_sub_sup(text_html)
     parser = TagStripper()
-    parser.feed(html)
+    parser.feed(text_html)
     return parser.get_data()
