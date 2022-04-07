@@ -90,8 +90,8 @@ def format_authors(authors: list) -> str:
 
 
 async def fetch_crossref(doi: str):
+    url = f"https://api.crossref.org/works/{doi}"
     try:
-        url = f"https://api.crossref.org/works/{doi}"
         logger.info(f"querying {url}")
         async with httpx.AsyncClient() as client:
             response = await client.get(url)
