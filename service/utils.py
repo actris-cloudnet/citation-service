@@ -72,7 +72,7 @@ sup = {
 sup_trans = str.maketrans(sup)
 
 
-def unicodize_sub_sup(text_html: str):
+def unicodize_sub_sup(text_html: str) -> str:
     text_html = re.sub(
         "<sub>(" + re_char_class(sub) + ")</sub>",
         lambda m: m[1].translate(sub_trans),
@@ -115,7 +115,7 @@ class TagStripper(HTMLParser):  # pylint: disable=W0223
         return self.text.getvalue()
 
 
-def strip_tags(text_html: str):
+def strip_tags(text_html: str) -> str:
     text_html = sanitize_html(text_html)
     text_html = unicodize_sub_sup(text_html)
     parser = TagStripper()
