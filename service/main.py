@@ -199,7 +199,7 @@ async def fetch_url(url: str) -> Publication:
         raise
 
 
-DOI_RE = r"((https?://)?doi\.org/|doi:)(?P<doi>.*)"
+DOI_RE = r"((https?://)?(dx\.)?doi\.org/|doi:)(?P<doi>.*)"
 HDL_RE = r"((https?://)?hdl\.handle\.net/|hdl:)(?P<hdl>.*)"
 
 
