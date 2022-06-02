@@ -86,9 +86,15 @@ def unicodize_sub_sup(text_html: str) -> str:
     return text_html
 
 
-def sanitize_html(text: str) -> str:
-    # Attempt to fix HTML that is already escaped.
+def unescape_html(text: str) -> str:
+    """Unescape HTML that is possibly escaped multiple times."""
     text = html.unescape(text)
+    text = html.unescape(text)
+    return text
+
+
+def sanitize_html(text: str) -> str:
+    text = unescape_html(text)
     sanitizer = Sanitizer(
         {
             "tags": {"strong", "em", "sub", "sub"},
