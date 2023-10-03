@@ -79,7 +79,7 @@ def unicodize_sub_sup(text_html: str) -> str:
         text_html,
     )
     text_html = re.sub(
-        "<sup>(" + re_char_class(sub) + ")</sup>",
+        "<sup>(" + re_char_class(sup) + ")</sup>",
         lambda m: m[1].translate(sup_trans),
         text_html,
     )
@@ -97,7 +97,7 @@ def sanitize_html(text: str) -> str:
     text = unescape_html(text)
     sanitizer = Sanitizer(
         {
-            "tags": {"strong", "em", "sub", "sub"},
+            "tags": {"strong", "em", "sub", "sup"},
             "attributes": {},
             "empty": set(),
             "separate": set(),
