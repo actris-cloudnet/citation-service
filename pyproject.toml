@@ -1,0 +1,30 @@
+[project]
+name = "citation-service"
+version = "0.0.0"
+requires-python = ">=3.10"
+dependencies = [
+    "h11",
+    "httpx",
+    "fastapi",
+    "pydantic>=1.2.0,<2.0.0",
+    "uvicorn",
+    "html-sanitizer",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pylint",
+    "pre-commit",
+    "release-version",
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages]
+find = {}
+
+[tool.release-version]
+filename = "pyproject.toml"
+pattern = "version = \"(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)\""

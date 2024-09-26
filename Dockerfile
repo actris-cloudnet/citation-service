@@ -3,7 +3,7 @@ RUN pip3 install --upgrade pip
 
 WORKDIR /app
 
-COPY setup.py .
+COPY pyproject.toml .
 RUN pip install .
 
 FROM base AS dev
