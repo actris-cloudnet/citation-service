@@ -4,16 +4,16 @@ Web service for generating citations based on [doi.org](https://doi.org) and [hd
 
 ## Usage
 
-Build service once:
+Build service:
 
 ```sh
-docker compose build
+docker build -t citation-service .
 ```
 
 Run service:
 
 ```sh
-docker compose up
+docker run --rm -p 9000:8080 citation-service
 ```
 
 Plain-text citation:
@@ -31,7 +31,6 @@ JSON citation:
     curl -H Accept:application/json http://localhost:9000/?uri=https://doi.org/10.21105/joss.02123
     {"url":"https://doi.org/10.21105/joss.02123","title":"CloudnetPy: A Python package for processing cloud remote sensing data","year":2020,"journal":"JOSS","volume":"5","issue":"53","pages":"2123","authors":"Tukiainen et al."}
 
-
 ## Development
 
 ```sh
@@ -39,7 +38,9 @@ python3 -m venv venv
 source venv/bin/activate
 python3 -m pip install .[dev]
 ```
+
 Running pre-commit checks for all files:
+
 ```sh
 pre-commit run --all
 ```
