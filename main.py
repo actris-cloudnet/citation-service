@@ -1,7 +1,6 @@
 import html
 import logging
 import re
-from html.parser import HTMLParser
 
 import httpx
 from fastapi import FastAPI, Header
@@ -9,6 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 from pydantic.error_wrappers import ErrorWrapper
+
 from utils import sanitize_html, strip_tags
 
 
@@ -158,49 +158,7 @@ async def fetch_crossref(doi: str) -> Publication:
     )
 
 
-class MyHTMLParser(HTMLParser):  # pylint: disable=W0223
-    def __init__(self):
-        super().__init__()
-        self.title = None
-        self.year = None
-        self.authors = []
-
-    def handle_starttag(self, tag, attrs):
-        attrs = dict(attrs)
-        if tag == "meta":
-            if attrs.get("name") == "citation_title":
-                self.title = attrs.get("content")
-            elif attrs.get("name") == "citation_date":
-                if date := attrs.get("content"):
-                    if match := re.search(r"\d{4}", date):
-                        self.year = match[0]
-            elif attrs.get("name") == "citation_author":
-                if author := attrs.get("content"):
-                    last_name = author.split(",")[0].strip()
-                    self.authors.append(last_name)
-
-
-async def fetch_url(url: str) -> Publication:
-    try:
-        logger.info(f"querying {url}")
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, follow_redirects=True)
-            response.raise_for_status()
-            parser = MyHTMLParser()
-            parser.feed(response.text)
-        return Publication(
-            url=url,
-            title=sanitize_html(parser.title),
-            year=parser.year,
-            authors=format_authors(parser.authors),
-        )
-    except:
-        logger.exception(f"querying {url} failed")
-        raise
-
-
 DOI_RE = r"((https?://)?(dx\.)?doi\.org/|doi:)(?P<doi>.*)"
-HDL_RE = r"((https?://)?hdl\.handle\.net/|hdl:)(?P<hdl>.*)"
 
 
 def render(publication: Publication, accept: str) -> PlainTextResponse:
@@ -220,8 +178,6 @@ def render(publication: Publication, accept: str) -> PlainTextResponse:
 async def root(uri: str, accept: str = Header(default="text/plain")):
     if match := re.match(DOI_RE, uri):
         return render(await fetch_crossref(match["doi"]), accept)
-    if match := re.match(HDL_RE, uri):
-        return render(await fetch_url("https://hdl.handle.net/" + match["hdl"]), accept)
     raise RequestValidationError(
         [
             ErrorWrapper(
