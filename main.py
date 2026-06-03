@@ -15,7 +15,7 @@ from utils import sanitize_html, strip_tags
 class Publication(BaseModel):
     url: str
     title: str | None
-    year: int | None
+    published: tuple[int] | tuple[int, int] | tuple[int, int, int] | None
     journal: str | None
     volume: str | None
     issue: str | None
@@ -26,7 +26,7 @@ class Publication(BaseModel):
         parts = [
             (self.authors if self.authors is not None else "N.N.")
             + " ("
-            + (str(self.year) if self.year is not None else "n.d.")
+            + (str(self.published[0]) if self.published is not None else "n.d.")
             + ")"
         ]
         if self.title is not None:
@@ -38,7 +38,7 @@ class Publication(BaseModel):
                 if self.issue is not None:
                     text += "(" + self.issue + ")"
             if self.pages is not None:
-                text += ", " + self.pages
+                text += ", " + self.pages.replace("-", "–")
             parts.append(text)
         parts.append(self.url)
         return ". ".join(parts)
@@ -47,7 +47,7 @@ class Publication(BaseModel):
         parts = [
             (html.escape(self.authors) if self.authors is not None else "N.N.")
             + " ("
-            + (str(self.year) if self.year is not None else "n.d.")
+            + (str(self.published[0]) if self.published is not None else "n.d.")
             + ")"
         ]
         if self.title is not None:
@@ -59,7 +59,7 @@ class Publication(BaseModel):
                 if self.issue is not None:
                     text += "(" + html.escape(self.issue) + ")"
             if self.pages is not None:
-                text += ", " + html.escape(self.pages)
+                text += ", " + html.escape(self.pages.replace("-", "–"))
             parts.append(text)
         parts.append(
             '<a href="' + html.escape(self.url) + '">' + html.escape(self.url) + "</a>"
@@ -70,7 +70,8 @@ class Publication(BaseModel):
         return {
             "url": self.url,
             "title": self.title,
-            "year": self.year,
+            "year": self.published[0] if self.published else None,
+            "published": self.published,
             "journal": self.journal,
             "volume": self.volume,
             "issue": self.issue,
@@ -83,10 +84,17 @@ app = FastAPI()
 logger = logging.getLogger(__name__)
 
 
+def format_author(author) -> str:
+    return author["family"] + ", " + re.sub(r"([^-\s])[^-\s]+", r"\1.", author["given"])
+
+
 def format_authors(authors: list) -> str:
-    if len(authors) <= 2:
-        return " & ".join(authors)
-    return authors[0] + " et al."
+    if len(authors) == 0:
+        return ""
+    formatted = [format_author(author) for author in authors]
+    if len(authors) == 1:
+        return formatted[0]
+    return ", ".join(formatted[:-1]) + ", & " + formatted[-1]
 
 
 async def fetch_crossref(doi: str) -> Publication:
@@ -108,10 +116,10 @@ async def fetch_crossref(doi: str) -> Publication:
         logger.warning(f"no title in {url}")
 
     try:
-        year = data["published"]["date-parts"][0][0]
+        published = tuple(data["published"]["date-parts"][0])
     except (KeyError, IndexError):
-        year = None
-        logger.warning(f"no year in {url}")
+        published = None
+        logger.warning(f"no published in {url}")
 
     try:
         journal = strip_tags(data["short-container-title"][0])
@@ -141,7 +149,7 @@ async def fetch_crossref(doi: str) -> Publication:
         logger.warning(f"no pages in {url}")
 
     try:
-        authors = format_authors([author["family"] for author in data["author"]])
+        authors = format_authors(data["author"])
     except (KeyError, IndexError):
         authors = None
         logger.warning(f"no authors in {url}")
@@ -149,7 +157,7 @@ async def fetch_crossref(doi: str) -> Publication:
     return Publication(
         url=f"https://doi.org/{doi}",
         title=title,
-        year=year,
+        published=published,
         journal=journal,
         volume=volume,
         issue=issue,
